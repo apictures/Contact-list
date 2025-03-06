@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact List Generator</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid black; padding: 10px; text-align: left; }
+        button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Contact List Generator</h2>
+    <table id="contactTable">
+        <tr>
+            <th>Name</th>
+            <th>Phone Number</th>
+            <th>Email</th>
+            <th>Action</th>
+        </tr>
+    </table>
+    <button onclick="addRow()">Add Contact</button>
+    <br><br>
+    <label for="fileType">Select File Type:</label>
+    <select id="fileType">
+        <option value="csv">CSV</option>
+        <option value="tsv">TSV</option>
+        <option value="vcf">VCF</option>
+    </select>
+    <button onclick="generateFile()">Generate File</button>
+    <script>
+        function addRow() {
+            let table = document.getElementById("contactTable");
+            let row = table.insertRow(-1);
+            row.innerHTML = `
+                <td><input type="text" placeholder="Name"></td>
+                <td><input type="text" placeholder="Phone Number"></td>
+                <td><input type="text" placeholder="Email"></td>
+                <td><button onclick="deleteRow(this)">❌</button></td>`;
+        }
+
+        function deleteRow(button) {
+            let row = button.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+        }
+
+        function generateFile() {
+            let table = document.getElementById("contactTable");
+            let contacts = [];
+            
+            for (let i = 1; i < table.rows.length; i++) { // Skip header row
+                let cells = table.rows[i].getElementsByTagName("input");
+                let name = cells[0].value.trim();
+                let phone = cells[1].value.trim();
+                let email = cells[2].value.trim();
+                
+                if (name && phone) {
+                    contacts.push({ name, phone, email });
+                }
+            }
+            
+            if (contacts.length === 0) {
+                alert("Please enter at least one contact.");
+                return;
+            }
+            
+            let fileType = document.getElementById("fileType").value;
+            fetch("http://127.0.0.1:5000/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contacts, file_type: fileType })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                let url = window.URL.createObjectURL(blob);
+                let a = document.createElement("a");
+                a.href = url;
+                a.download = "contacts." + fileType;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            })
+            .catch(error => console.error("Error generating file:", error));
+        }
+    </script>
+</body>
+</html>
